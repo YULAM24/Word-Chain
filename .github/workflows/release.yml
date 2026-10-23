@@ -1,0 +1,56 @@
+name: Build Windows release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify version tag
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag must match package.json version" }
+      - run: npm ci
+      - run: npm test
+      - name: Build portable Windows EXE
+        run: npm run dist:win -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify artifact and write checksum
+        shell: pwsh
+        run: |
+          $exe = 'release/Word-Chain-Windows-x64.exe'
+          if (!(Test-Path $exe)) { throw 'Expected EXE missing' }
+          if ((Get-Item $exe).Length -lt 1MB) { throw 'EXE unexpectedly small' }
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Word-Chain-Windows-x64.exe" | Set-Content -Encoding ascii 'release/SHA256SUMS.txt'
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          name: 끝말 사전 ${{ github.ref_name }} · Windows
+          body: |
+            ## Windows x64 다운로드
+            **Word-Chain-Windows-x64.exe**를 다운로드하고 실행하세요. 설치 및 Node.js 설치가 필요 없는 portable 버전입니다.
+
+            - 작은 창 · 항상 위 고정 · 시작 글자 검색
+            - 후보 넘기기 · 사용 단어 복사 및 제외 · 턴 넘기기
+            - 표준국어대사전 API 인증키를 앱 설정에 입력해야 검색할 수 있습니다.
+
+            코드 서명이 없는 초기 배포판으로 Windows 보안 경고가 표시될 수 있습니다.
+            빌드 자동화에서 컴파일과 자동 테스트를 수행합니다. Windows GUI와 실제 인증키 검색은 별도 확인이 필요합니다.
+            파일 무결성 확인용 SHA-256은 SHA256SUMS.txt를 참고하세요.
+          files: |
+            release/Word-Chain-Windows-x64.exe
+            release/SHA256SUMS.txt

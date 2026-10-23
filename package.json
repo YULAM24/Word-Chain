@@ -21,13 +21,15 @@
     "productName": "끝말 사전",
     "files": [
       "dist/**/*",
+      "!dist/*.test.js",
       "package.json"
     ],
     "directories": {
       "output": "release"
     },
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "artifactName": "Word-Chain-Windows-x64.${ext}"
     }
   }
 }

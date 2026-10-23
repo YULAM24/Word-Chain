@@ -2,7 +2,13 @@
 
 TypeScript + Electron으로 만든 작은 끝말잇기 보조도구입니다. 기본 360×440 창과 항상 위 고정을 지원합니다. 임의 단어를 넣지 않고 **표준국어대사전 공식 Open API**만 조회합니다.
 
-## Windows에서 실행
+## EXE 다운로드
+
+[Windows x64 EXE 다운로드](https://github.com/YULAM24/Word-Chain/releases/latest/download/Word-Chain-Windows-x64.exe) · [릴리스 목록](https://github.com/YULAM24/Word-Chain/releases)
+
+릴리스 게시 후 이용할 수 있습니다. 설치 없이 실행하는 portable 버전이며 Node.js 설치가 필요 없습니다. 사전 검색에는 본인 인증키가 필요합니다. 코드 서명이 없어 Windows 보안 경고가 표시될 수 있습니다.
+
+## 소스로 Windows에서 실행
 
 Node.js 22 이상을 설치하고 프로젝트 폴더에서 PowerShell로 실행하세요.
 
@@ -50,3 +56,7 @@ TypeScript 컴파일과 합성 API 응답을 이용한 필터·오류·요청 �
 GitHub 저장소에서 **Settings → Pages → Build and deployment → Source → GitHub Actions**를 선택하고, **Actions → Publish introduction page → Run workflow**로 게시합니다. `main` 브랜치의 소개 페이지 변경 시에도 자동 게시됩니다.
 
 기본 예상 주소는 `https://YULAM24.github.io/Word-Chain/`입니다. 실제 배포 성공과 페이지 접속을 확인한 뒤 인증키 신청의 사용 URL에 입력하세요. 소개 페이지 URL의 접수 가능 여부와 인증키 발급은 국립국어원 정책에 따릅니다.
+
+## 릴리스 자동화
+
+`v0.1.0` 형식의 버전 태그를 푸시하면 GitHub Actions의 **Build Windows release**가 Windows에서 의존성 설치, 테스트, EXE 빌드를 수행한 후 GitHub Release에 EXE와 SHA-256 체크섬을 게시합니다. 버전 태그와 package.json 버전이 일치해야 합니다. 빌드 실패 시 릴리스는 게시하지 않습니다.
