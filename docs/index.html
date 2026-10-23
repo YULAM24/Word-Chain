@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="표준국어대사전 등재 단어를 검색하는 Windows용 끝말잇기 보조 프로그램, 끝말 사전의 소개와 API 이용 안내입니다.">
+<title>끝말 사전 | Windows 끝말잇기 보조도구</title>
+<style>
+:root{color-scheme:dark;font-family:'Malgun Gothic','Segoe UI',sans-serif;background:#101827;color:#eef4fc}*{box-sizing:border-box}body{margin:0;line-height:1.8}main{max-width:900px;margin:auto;padding:70px 24px 40px}header{border-bottom:1px solid #304056;padding-bottom:38px}.tag{color:#87dfcb;font-size:13px;letter-spacing:.12em}h1{font-size:clamp(38px,8vw,64px);line-height:1.2;margin:16px 0}header p{color:#bfccdd;max-width:620px;font-size:18px}a{color:#9be7d5;text-underline-offset:4px}.button{display:inline-block;background:#87dfcb;color:#112e29;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:bold;margin-top:12px}section{margin-top:38px}h2{font-size:23px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{border:1px solid #304056;border-radius:12px;padding:20px;background:#172337}.card h3{margin:0 0 8px;font-size:17px}.card p{color:#bfccdd;margin:0}li{margin:7px 0}aside{border-left:3px solid #87dfcb;padding:8px 18px;background:#172337;color:#bfccdd}footer{border-top:1px solid #304056;margin-top:44px;padding-top:20px;color:#9cacbf;font-size:13px}code{overflow-wrap:anywhere}a:focus-visible{outline:3px solid #fff;outline-offset:5px}
+</style>
+</head>
+<body><main>
+<header><div class="tag">WINDOWS · 끝말잇기 보조도구</div><h1>막힌 글자에,<br>다음 단어를.</h1><p><strong>끝말 사전</strong>은 표준국어대사전에 등재된 단어를 찾아보는 작은 데스크톱 프로그램입니다. 게임 옆에 띄워 두고 시작 글자로 후보와 뜻을 확인하세요.</p><a class="button" href="https://github.com/YULAM24/Word-Chain">프로젝트 · 설치 안내 ↗</a></header>
+<section aria-labelledby="features"><h2 id="features">작은 창에 필요한 기능만</h2><div class="grid">
+<div class="card"><h3>시작 글자로 검색</h3><p>공식 사전 API로 단어와 뜻을 조회합니다. 기본 검색은 두 글자 이상의 명사입니다.</p></div>
+<div class="card"><h3>항상 위에 고정</h3><p>기본 360×440 크기의 창을 게임 옆에 배치하고 필요에 따라 크기를 조절합니다.</p></div>
+<div class="card"><h3>후보와 턴 넘기기</h3><p>원하지 않는 후보를 넘기거나 검색을 비워 다음 턴을 준비합니다.</p></div>
+<div class="card"><h3>복사와 사용 기록</h3><p>단어를 복사하고 이번 게임에서 사용한 후보를 제외합니다. 다음 검색은 마지막 글자로 시작합니다.</p></div>
+</div></section>
+<section><h2>표준국어대사전 API 이용 목적</h2><p>이 프로그램은 국립국어원 표준국어대사전 검색 Open API를 이용해 사용자가 입력한 시작 글자에 해당하는 표제어, 뜻풀이 및 사전 원문 링크를 조회·표시하기 위해 개발되었습니다. 임의의 단어 목록이나 다른 사전의 단어를 검색 결과에 섞지 않습니다.</p><ul><li>요청 대상: <code>https://stdict.korean.go.kr/api/search.do</code></li><li>이용 형태: Windows 데스크톱 앱에서 사용자가 검색할 때 HTTPS 요청</li><li>표시 내용: 검색 조건에 맞는 단어, 뜻풀이, 공식 사전 원문 링크</li><li>이 페이지는 프로그램 소개 페이지이며, 웹에서 사전 검색을 제공하지 않습니다.</li></ul><p><a href="https://stdict.korean.go.kr/openapi/openApiInfo.do">공식 Open API 이용·인증키 발급 안내 ↗</a></p><aside>개별 사용자가 발급받은 API 인증키를 앱 설정에 입력해야 검색할 수 있습니다. 인증키는 실행 중 메모리에만 보관하며 별도 파일이나 이 소개 페이지에 저장하지 않습니다. 검색어와 인증키는 검색 요청 시 공식 사전 API로 전송됩니다.</aside></section>
+<section><h2>사용 방법</h2><ol><li>프로젝트의 README에 따라 Windows에서 앱을 실행합니다.</li><li>설정에 표준국어대사전 API 인증키를 입력합니다.</li><li>시작 글자를 입력하고 검색을 누릅니다.</li><li>후보를 확인해 복사한 뒤 게임에 직접 붙여넣습니다.</li></ol><p>게임의 입력이나 패스 버튼을 자동으로 조작하지 않습니다. 두음법칙과 게임별 금지어는 직접 확인해야 하며, 사전 등재어도 게임 규칙에 따라 사용할 수 없을 수 있습니다.</p></section>
+<section><h2>개발 및 문의</h2><p>TypeScript와 Electron으로 개발한 Windows용 프로젝트입니다. 현재 개발 중이며, 설치와 빌드 방법은 저장소에서 확인할 수 있습니다.</p><p><a href="https://github.com/YULAM24/Word-Chain#readme">설치·빌드 안내</a> · <a href="https://github.com/YULAM24/Word-Chain/issues">문제 제보·문의</a></p></section>
+<footer>끝말 사전 · Word-Chain<br>이 프로그램은 국립국어원의 공식 제품이 아닙니다. 사전 데이터의 출처는 국립국어원 표준국어대사전입니다.</footer>
+</main></body></html>

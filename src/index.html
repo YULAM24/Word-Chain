@@ -1,0 +1,8 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"><title>끝말 사전</title><link rel="stylesheet" href="style.css"></head><body>
+<header><span>끝말 <b>사전</b></span><label><input id="pin" type="checkbox" checked> 항상 위</label><button id="settingsButton" aria-label="설정">설정</button></header>
+<section id="settings" hidden><label for="key">표준국어대사전 API 인증키</label><input id="key" type="password" autocomplete="off" placeholder="발급받은 인증키"><small>키는 메모리에만 보관합니다.</small><button id="issue">인증키 발급 안내 ↗</button></section>
+<form id="searchForm"><input id="prefix" aria-label="시작 글자" placeholder="시작 글자 · 예: 가" maxlength="30" autofocus><button class="primary">검색</button></form>
+<label class="option"><input id="nouns" type="checkbox" checked> 명사만 · 한 글자 단어 제외</label>
+<main aria-live="polite"><div class="eyebrow">표준국어대사전</div><h1 id="word">어떤 글자로 시작하나요?</h1><p id="definition">시작 글자를 입력하면 등재된 단어를 찾아드려요.</p><button id="source" class="link" disabled>사전 원문 ↗</button></main>
+<div class="actions"><button id="use" class="primary" disabled>사용·복사</button><button id="skip" disabled>후보 넘기기</button><button id="pass">턴 넘기기</button></div>
+<footer><span id="status" role="status">Enter로 검색</span><button id="reset" class="link">새 게임</button></footer><script src="renderer.js"></script></body></html>
