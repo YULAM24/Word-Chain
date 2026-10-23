@@ -26,3 +26,51 @@ export async function search(key: string, prefix: string, nouns: boolean, start:
   try { data = await response.json(); } catch { throw new Error('사전 응답을 읽지 못했습니다. 인증키와 API 이용 상태를 확인하세요.'); }
   return parseResponse(data, prefix, nouns);
 }
+
+/** Per-process, bounded cache; never persists credentials or dictionary responses. */
+export class DictionaryClient {
+  private cache = new Map<string,{expires:number; result:SearchResult}>();
+  private pending = new Map<string,Promise<SearchResult>>();
+  private active = 0;
+  private waiting: Array<()=>void> = [];
+  constructor(private load: typeof search = search, private now: ()=>number = Date.now) {}
+  async search(key:string,prefix:string,nouns:boolean,start:number):Promise<SearchResult> {
+    const id=JSON.stringify([key,prefix,nouns,start]);
+    const cached=this.cache.get(id);
+    if(cached && cached.expires>this.now())return cached.result;
+    const pending=this.pending.get(id);if(pending)return pending;
+    const job=(async()=>{
+      if(this.active>=4)await new Promise<void>(resolve=>this.waiting.push(resolve));
+      else this.active++;
+      try {
+        const result=await this.load(key,prefix,nouns,start);
+        this.cache.delete(id);
+        this.cache.set(id,{expires:this.now()+30*60*1000,result});
+        if(this.cache.size>300)this.cache.delete(this.cache.keys().next().value!);
+        return result;
+      } finally {
+        const next=this.waiting.shift();if(next)next();else this.active--;
+      }
+    })();
+    this.pending.set(id,job);
+    try{return await job;}finally{this.pending.delete(id);}
+  }
+  async difficulty(key:string,ending:string,nouns:boolean,dueum:boolean):Promise<import('./ranking').Difficulty> {
+    const {startingVariants}=await import('./ranking');
+    const pages=await Promise.all(startingVariants(ending,dueum).map(v=>this.search(key,v,nouns,1)));
+    const replies=new Set(pages.flatMap(p=>p.words.map(w=>w.text))).size;
+    return {replies,complete:pages.every(p=>p.total<=100)};
+  }
+  async rank(key:string,texts:string[],nouns:boolean,dueum:boolean,cancelled:()=>boolean):Promise<Record<string,import('./ranking').Difficulty>> {
+    const endings=[...new Set(texts.map(w=>w.slice(-1)))];
+    const result:Record<string,import('./ranking').Difficulty>={};
+    let index=0;
+    const worker=async()=>{
+      while(index<endings.length && !cancelled()){
+        const ending=endings[index++];
+        try{result[ending]=await this.difficulty(key,ending,nouns,dueum);}catch{/* Unknown stays unknown; never label a failed lookup terminal. */}
+      }
+    };
+    await Promise.all(Array.from({length:4},worker));return result;
+  }
+}

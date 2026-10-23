@@ -1,6 +1,6 @@
 {
   "name": "word-chain-helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "표준국어대사전 끝말잇기 보조도구",
   "main": "dist/main.js",
