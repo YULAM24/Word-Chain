@@ -1,5 +1,6 @@
 /** Conservative dictionary-based difficulty, independent of game-specific rules. */
-export interface Difficulty { replies: number; complete: boolean }
+export interface Difficulty { replies: number; complete: boolean; matches?: number }
+export interface RankProgress { ratings: Record<string,Difficulty>; completed: number; total: number; failed: number }
 export function startingVariants(ending: string, dueum: boolean): string[] {
   if (!dueum || !/^[가-힣]$/.test(ending)) return [ending];
   const code = ending.charCodeAt(0) - 0xac00;

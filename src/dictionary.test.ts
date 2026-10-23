@@ -8,7 +8,7 @@ assert.equal(parseResponse(data,'가',true).words[0].definition,'도구');
 assert.deepEqual(parseResponse(data,'가',false).words.map(w=>w.text),['가방','가다']);
 });
 test('인증 오류와 잘못된 응답을 빈 검색 결과로 취급하지 않음',()=>{assert.throws(()=>parseResponse({error:{}},'가',true));assert.throws(()=>parseResponse({},'가',true));});
-test('빈 결과',()=>assert.deepEqual(parseResponse({channel:{total:0}},'가',true),{words:[],total:0}));
+test('빈 결과',()=>assert.deepEqual(parseResponse({channel:{total:0}},'가',true),{words:[],total:0,scanned:0}));
 test('잘못된 입력은 네트워크 호출 전에 거부',async()=>{await assert.rejects(search('','가',true,1));await assert.rejects(search('key','ㄱ',true,1));await assert.rejects(search('key','가',true,1001));});
 test('공식 API 요청과 페이지 번호',async()=>{
 const original=globalThis.fetch;
@@ -40,7 +40,7 @@ test('두음법칙 후속어와 불완전 응답을 한방으로 잘못 분류�
   assert.deepEqual(await client.difficulty('a','력',true,true),{replies:1,complete:true});
   assert.deepEqual(await client.difficulty('a','력',true,false),{replies:0,complete:true});
   const incomplete=new DictionaryClient(async()=>({total:101,words:[]}));
-  assert.deepEqual(await incomplete.difficulty('a','가',true,false),{replies:0,complete:false});
+  assert.deepEqual(await incomplete.difficulty('a','가',true,false),{replies:0,complete:false,matches:101});
 });
 test('실패한 난도 조회는 알 수 없음으로 남기고 취소된 분석은 요청하지 않음',async()=>{
   let calls=0;const client=new DictionaryClient(async()=>{calls++;throw new Error('offline');});
@@ -52,4 +52,27 @@ test('동시에 보내는 사전 요청 수 제한',async()=>{
   const client=new DictionaryClient(async()=>{active++;max=Math.max(max,active);await new Promise(r=>setImmediate(r));active--;return {total:0,words:[]};});
   await Promise.all(Array.from('가나다라마바사아자차카타파하').map(s=>client.search('a',s,true,1)));
   assert.equal(max,4);
+});
+
+test('100개를 넘는 후속어도 사전 전체 건수로 난도 차이를 보존',async()=>{
+  const sample=Array.from({length:100},(_,i)=>({text:'나무'+i,definition:'',link:''}));
+  const client=new DictionaryClient(async(_k,prefix)=>({total:prefix==='방'?8000:180,words:sample}));
+  assert.equal((await client.difficulty('a','방',true,false)).matches,8000);
+  assert.equal((await client.difficulty('a','구',true,false)).matches,180);
+});
+test('한 끝글자의 분석이 지연되어도 완료된 다른 결과는 즉시 전송',async()=>{
+  let finish!:(value:{words:never[];total:number})=>void;
+  const pending=new Promise<{words:never[];total:number}>(resolve=>{finish=resolve;});
+  const client=new DictionaryClient(async(_k,prefix)=>prefix==='방'?pending:{words:[],total:0});
+  const progress:Array<{ratings:Record<string,unknown>;completed:number}>=[];
+  const job=client.rank('a',['가방','가늄'],true,false,()=>false,p=>progress.push(p));
+  await new Promise(r=>setImmediate(r));
+  assert.equal(progress.length,1);assert.ok(progress[0].ratings['늄']);
+  finish({words:[],total:0});await job;assert.equal(progress.length,2);
+});
+test('일부 응답 누락이나 잘못된 total은 한방으로 오판하지 않음',async()=>{
+  assert.throws(()=>parseResponse({channel:{total:4}},'가',true));
+  assert.throws(()=>parseResponse({channel:{total:'invalid',item:[]}},'가',true));
+  const client=new DictionaryClient(async()=>parseResponse({channel:{total:4,item:[]}},'가',true));
+  assert.equal((await client.difficulty('a','가',true,false)).complete,false);
 });

@@ -31,11 +31,11 @@ test('설정으로 한방·난도 우선순위 전환, 원래 순서 복원, 분
  vm.runInContext(readFileSync(require.resolve('./renderer.js'),'utf8'),context);
  get('searchForm').handler({preventDefault(){}});await flush();assert.equal(get('word').textContent,'가방');
  get('oneShot').checked=true;get('oneShot').handler();assert.equal(get('use').disabled,false);
- finish({'방':{replies:100,complete:true},'구':{replies:2,complete:true},'늄':{replies:0,complete:true}});await flush();
+ finish({ratings:{'방':{replies:100,complete:true},'구':{replies:2,complete:true},'늄':{replies:0,complete:true}}});await flush();
  assert.equal(get('word').textContent,'가늄');assert.match(get('status').textContent,/한방 후보/);
  get('skip').onclick();assert.equal(get('word').textContent,'가방');
- get('hard').checked=true;get('hard').handler();finish({'방':{replies:100,complete:true},'구':{replies:2,complete:true},'늄':{replies:0,complete:true}});await flush();assert.equal(get('word').textContent,'가구');
- get('oneShot').checked=false;get('oneShot').handler();finish({});await flush();
+ get('hard').checked=true;get('hard').handler();finish({ratings:{'방':{replies:100,complete:true},'구':{replies:2,complete:true},'늄':{replies:0,complete:true}}});await flush();assert.equal(get('word').textContent,'가구');
+ get('oneShot').checked=false;get('oneShot').handler();finish({ratings:{}});await flush();
  get('hard').checked=false;get('hard').handler();assert.equal(get('word').textContent,'가방');
 });
 
@@ -44,5 +44,32 @@ test('턴을 넘긴 뒤 도착한 난도 분석은 이전 단어를 되살리지
  let finish!:(v:unknown)=>void;
  const context=vm.createContext({document:{getElementById:get},window:{helper:{cancelRank:async()=>{},rank:()=>new Promise(r=>{finish=r;}),search:async()=>({result:{total:1,words:[{text:'가방',definition:'',link:''}]}})}}});
  vm.runInContext(readFileSync(require.resolve('./renderer.js'),'utf8'),context);
- get('searchForm').handler({preventDefault(){}});await flush();get('pass').onclick();finish({'방':{replies:0,complete:true}});await flush();assert.equal(get('word').textContent,'턴을 넘겼습니다');assert.equal(get('use').disabled,true);
+ get('searchForm').handler({preventDefault(){}});await flush();get('pass').onclick();finish({ratings:{'방':{replies:0,complete:true}}});await flush();assert.equal(get('word').textContent,'턴을 넘겼습니다');assert.equal(get('use').disabled,true);
+});
+
+test('첫 페이지 밖의 한방 후보를 자동 탐색하고 확인 즉시 우선 표시',async()=>{
+ const elements=new Map<string,any>();const get=(id:string)=>{if(!elements.has(id))elements.set(id,{value:'가',checked:['nouns','oneShot'].includes(id),addEventListener(_n:string,fn:unknown){this.handler=fn;}});return elements.get(id);};
+ const requests:number[]=[];let progress!:(p:any)=>void,finishSecond!:(p:any)=>void;let secondId=0;
+ const context=vm.createContext({document:{getElementById:get},window:{helper:{cancelRank:async()=>{},onRankProgress:(fn:any)=>{progress=fn;},search:async(a:any)=>{requests.push(a.start);return {result:{total:101,words:a.start===1?[{text:'가방',definition:'',link:''}]:[{text:'가늄',definition:'',link:''}]}};},rank:(a:any)=>{
+  if(a.texts.includes('가방'))return Promise.resolve({ratings:{'방':{replies:100,complete:false,matches:4000}}});
+  secondId=a.requestId;return new Promise(r=>{finishSecond=r;});
+ }}}});
+ vm.runInContext(readFileSync(require.resolve('./renderer.js'),'utf8'),context);
+ get('searchForm').handler({preventDefault(){}});await flush();assert.deepEqual(requests,[1,101]);assert.equal(get('word').textContent,'가방');
+ progress({requestId:secondId,ratings:{'늄':{replies:0,complete:true}},completed:1,total:2,failed:0});
+ assert.equal(get('word').textContent,'가늄');assert.match(get('status').textContent,/한방 후보/);
+ finishSecond({ratings:{'늄':{replies:0,complete:true}},failed:0});await flush();assert.match(get('status').textContent,/분석 완료/);
+});
+test('후속어가 모두 100개 이상이어도 어려운 단어가 먼저 표시됨',async()=>{
+ const elements=new Map<string,any>();const get=(id:string)=>{if(!elements.has(id))elements.set(id,{value:'가',checked:['nouns','hard'].includes(id),addEventListener(_n:string,fn:unknown){this.handler=fn;}});return elements.get(id);};
+ const context=vm.createContext({document:{getElementById:get},window:{helper:{cancelRank:async()=>{},search:async()=>({result:{total:2,words:[{text:'가방',definition:'',link:''},{text:'가구',definition:'',link:''}]}}),rank:async()=>({ratings:{'방':{replies:100,complete:false,matches:8000},'구':{replies:100,complete:false,matches:180}},failed:0})}}});
+ vm.runInContext(readFileSync(require.resolve('./renderer.js'),'utf8'),context);
+ get('searchForm').handler({preventDefault(){}});await flush();assert.equal(get('word').textContent,'가구');assert.match(get('status').textContent,/180건/);
+ get('hard').checked=false;get('hard').handler();assert.equal(get('word').textContent,'가방');
+});
+test('난도 조회 실패를 명확히 표시하고 한방으로 오판하지 않음',async()=>{
+ const elements=new Map<string,any>();const get=(id:string)=>{if(!elements.has(id))elements.set(id,{value:'가',checked:['nouns','oneShot'].includes(id),addEventListener(_n:string,fn:unknown){this.handler=fn;}});return elements.get(id);};
+ const context=vm.createContext({document:{getElementById:get},window:{helper:{cancelRank:async()=>{},search:async()=>({result:{total:1,words:[{text:'가방',definition:'',link:''}]}}),rank:async()=>({ratings:{},failed:1})}}});
+ vm.runInContext(readFileSync(require.resolve('./renderer.js'),'utf8'),context);
+ get('searchForm').handler({preventDefault(){}});await flush();assert.match(get('status').textContent,/분석 실패 1건/);assert.doesNotMatch(get('status').textContent,/한방 후보/);
 });

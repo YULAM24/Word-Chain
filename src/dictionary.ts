@@ -1,16 +1,18 @@
 export interface Word { text: string; definition: string; link: string }
-export interface SearchResult { words: Word[]; total: number }
+export interface SearchResult { words: Word[]; total: number; scanned?: number }
 export function parseResponse(data: unknown, prefix: string, nouns: boolean): SearchResult {
   const body = data as { channel?: {total?: number | string; item?: any[]}; error?: unknown };
   if (!body || body.error || !body.channel || body.channel.total === undefined) throw new Error('사전 응답을 확인할 수 없습니다. 인증키와 API 이용 상태를 확인하세요.');
+  const total = Number(body.channel.total);
+  if (!Number.isSafeInteger(total) || total < 0 || (total > 0 && !Array.isArray(body.channel.item))) throw new Error('불완전한 사전 응답입니다. 다시 검색하세요.');
   const words: Word[] = [];
   for (const item of body.channel.item ?? []) {
     const text = String(item.word ?? '').replace(/[-^\d]/g, '');
-    if (!/^[가-힣]{2,}$/.test(text) || !text.startsWith(prefix) || (nouns && item.pos !== '명사')) continue;
+    if (!/^[가-힣]{2,}$/.test(text) || !text.startsWith(prefix) || (nouns && String(item.pos ?? '').trim() !== '명사')) continue;
     const sense = Array.isArray(item.sense) ? item.sense[0] : item.sense;
     words.push({text, definition: String(sense?.definition ?? ''), link: String(sense?.link ?? '')});
   }
-  return {words, total: Number(body.channel.total)};
+  return {words, total, scanned: (body.channel.item ?? []).length};
 }
 export async function search(key: string, prefix: string, nouns: boolean, start: number): Promise<SearchResult> {
   if (!key.trim()) throw new Error('설정에서 공식 사전 API 인증키를 입력하세요.');
@@ -59,16 +61,20 @@ export class DictionaryClient {
     const {startingVariants}=await import('./ranking');
     const pages=await Promise.all(startingVariants(ending,dueum).map(v=>this.search(key,v,nouns,1)));
     const replies=new Set(pages.flatMap(p=>p.words.map(w=>w.text))).size;
-    return {replies,complete:pages.every(p=>p.total<=100)};
+    const complete=pages.every(p=>p.total<=100 && (p.scanned ?? p.total)>=p.total);
+    return complete ? {replies,complete} : {replies,complete,matches:pages.reduce((sum,p)=>sum+p.total,0)};
   }
-  async rank(key:string,texts:string[],nouns:boolean,dueum:boolean,cancelled:()=>boolean):Promise<Record<string,import('./ranking').Difficulty>> {
+  async rank(key:string,texts:string[],nouns:boolean,dueum:boolean,cancelled:()=>boolean, progress?: (p:import('./ranking').RankProgress)=>void):Promise<Record<string,import('./ranking').Difficulty>> {
     const endings=[...new Set(texts.map(w=>w.slice(-1)))];
     const result:Record<string,import('./ranking').Difficulty>={};
-    let index=0;
+    let index=0, completed=0, failed=0;
     const worker=async()=>{
       while(index<endings.length && !cancelled()){
         const ending=endings[index++];
-        try{result[ending]=await this.difficulty(key,ending,nouns,dueum);}catch{/* Unknown stays unknown; never label a failed lookup terminal. */}
+        let rating: import('./ranking').Difficulty | undefined;
+        try{rating=await this.difficulty(key,ending,nouns,dueum);result[ending]=rating;}catch{failed++;}
+        completed++;
+        if(!cancelled())progress?.({ratings:rating?{[ending]:rating}:{},completed,total:endings.length,failed});
       }
     };
     await Promise.all(Array.from({length:4},worker));return result;
